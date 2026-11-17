@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tanda tangan payout wallet — Synmerco mioo</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; line-height: 1.5; color: #111; }
+  h1 { font-size: 20px; }
+  .box { background: #f4f4f4; border: 1px solid #ddd; border-radius: 8px; padding: 12px; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 13px; }
+  button { display: block; width: 100%; padding: 14px; margin: 10px 0; font-size: 16px; border: none; border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer; }
+  button:disabled { background: #9ca3af; }
+  .warn { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; padding: 12px; font-size: 14px; }
+  .ok { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; font-size: 14px; }
+  #expiry { font-weight: bold; }
+  .small { font-size: 13px; color: #555; }
+</style>
+</head>
+<body>
+<h1>Tanda tangan payout wallet — agen mioo</h1>
+<p>Ini cuma <b>bukti kepemilikan wallet</b> (Sign-In with Ethereum). <b>Tidak ada transfer, tidak ada approve, tidak ada gas.</b> Jangan pernah bagikan seed phrase atau private key ke siapa pun.</p>
+<div class="warn">⏱️ Kode ini kedaluwarsa dalam <span id="expiry">10:00</span>. Kalau habis, minta kode baru ke Cho Kho wie.</div>
+
+<h2>1. Hubungkan wallet</h2>
+<button id="connectBtn">Hubungkan wallet</button>
+<p id="addrLine" class="small">Wallet belum terhubung.</p>
+
+<h2>2. Pesan yang akan ditandatangani</h2>
+<p class="small">Alamat wallet kamu akan terisi otomatis setelah terhubung. Baca baik-baik sebelum tanda tangan — isinya harus persis seperti ini:</p>
+<div class="box" id="msgPreview">— hubungkan wallet dulu —</div>
+
+<h2>3. Tanda tangan</h2>
+<button id="signBtn" disabled>Tanda tangan pesan</button>
+<div id="result" style="display:none" class="ok">
+  <p><b>Berhasil.</b> Kirim dua hal ini ke Cho Kho wie di chat:</p>
+  <p>Alamat wallet:<br><span class="box" id="outAddr"></span></p>
+  <p>Tanda tangan:<br><span class="box" id="outSig"></span></p>
+  <button id="copyBtn">Salin tanda tangan</button>
+</div>
+<p id="err" style="color:#b91c1c"></p>
+
+<script>
+const NONCE = "f4c60b009e104527a0fcb06a3652684d";
+const AGENT_DID = "did:key:z6MkkiaQ6EiYMY25voMrR2GDjXV86r6zmBr9xJTxWiqvGnvM";
+const EXPIRES_AT = Date.now() + 600000;
+const STATEMENT = "Link this wallet as the payout wallet for Synmerco agent mioo (" + AGENT_DID + ").";
+
+let address = null;
+let message = null;
+
+function buildMessage(addr) {
+  const issuedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  return "synmerco.com wants you to sign in with your Ethereum account:\n"
+    + addr + "\n\n"
+    + STATEMENT + "\n\n"
+    + "URI: https://synmerco.com\n"
+    + "Version: 1\n"
+    + "Chain ID: 8453\n"
+    + "Nonce: " + NONCE + "\n"
+    + "Issued At: " + issuedAt;
+}
+
+function tick() {
+  const left = Math.max(0, EXPIRES_AT - Date.now());
+  const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+  document.getElementById("expiry").textContent = m + ":" + String(s).padStart(2, "0");
+  if (left <= 0) {
+    document.getElementById("signBtn").disabled = true;
+    document.getElementById("err").textContent = "Kode kedaluwarsa. Minta kode baru ke Cho Kho wie.";
+  }
+}
+setInterval(tick, 1000); tick();
+
+document.getElementById("connectBtn").addEventListener("click", async () => {
+  const err = document.getElementById("err"); err.textContent = "";
+  try {
+    if (!window.ethereum) { err.textContent = "Tidak ada wallet terdeteksi di browser ini. Buka halaman ini di browser yang wallet-nya terhubung (mis. Mises)."; return; }
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    address = accounts[0];
+    message = buildMessage(address);
+    document.getElementById("addrLine").textContent = "Terhubung: " + address;
+    document.getElementById("msgPreview").textContent = message;
+    document.getElementById("signBtn").disabled = false;
+  } catch (e) {
+    err.textContent = "Gagal menghubungkan wallet: " + (e && e.message ? e.message : e);
+  }
+});
+
+document.getElementById("signBtn").addEventListener("click", async () => {
+  const err = document.getElementById("err"); err.textContent = "";
+  try {
+    if (!address || !message) return;
+    if (Date.now() > EXPIRES_AT) { err.textContent = "Kode kedaluwarsa. Minta kode baru ke Cho Kho wie."; return; }
+    const sig = await window.ethereum.request({
+      method: "personal_sign",
+      params: [message, address]
+    });
+    document.getElementById("outAddr").textContent = address;
+    document.getElementById("outSig").textContent = sig;
+    document.getElementById("result").style.display = "block";
+    document.getElementById("copyBtn").onclick = async () => {
+      try { await navigator.clipboard.writeText(sig); document.getElementById("copyBtn").textContent = "Disalin!"; }
+      catch (e) { err.textContent = "Salin manual dari kotak di atas."; }
+    };
+  } catch (e) {
+    err.textContent = "Penandatanganan dibatalkan / gagal: " + (e && e.message ? e.message : e);
+  }
+});
+</script>
+</body>
+</html>
