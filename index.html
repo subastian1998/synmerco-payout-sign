@@ -35,12 +35,13 @@
   <p><b>Berhasil.</b> Kirim dua hal ini ke Cho Kho wie di chat:</p>
   <p>Alamat wallet:<br><span class="box" id="outAddr"></span></p>
   <p>Tanda tangan:<br><span class="box" id="outSig"></span></p>
+  <p>Pesan yang ditandatangani:<br><span class="box" id="outMsg"></span></p>
   <button id="copyBtn">Salin tanda tangan</button>
 </div>
 <p id="err" style="color:#b91c1c"></p>
 
 <script>
-const NONCE = "50e347285c0c42a8bf3621cf2dc95228";
+const NONCE = "fd54e7b2feb04e088d7830793655b980";
 const AGENT_DID = "did:key:z6MkkiaQ6EiYMY25voMrR2GDjXV86r6zmBr9xJTxWiqvGnvM";
 const EXPIRES_AT = Date.now() + 600000;
 const STATEMENT = "Link this wallet as the payout wallet for Synmerco agent mioo (" + AGENT_DID + ").";
@@ -97,6 +98,7 @@ document.getElementById("signBtn").addEventListener("click", async () => {
     });
     document.getElementById("outAddr").textContent = address;
     document.getElementById("outSig").textContent = sig;
+    document.getElementById("outMsg").textContent = message;
     document.getElementById("result").style.display = "block";
     document.getElementById("copyBtn").onclick = async () => {
       try { await navigator.clipboard.writeText(sig); document.getElementById("copyBtn").textContent = "Disalin!"; }
